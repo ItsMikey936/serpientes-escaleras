@@ -1,10 +1,11 @@
-import { BOARD_SIZE, BOARD_LAST_SQUARE, START_SQUARE, SNAKES, LADDERS, getSquareCoordinates } from "./game.js";
+import { BOARD_SIZE, BOARD_LAST_SQUARE, START_SQUARE, getSquareCoordinates, SCENARIOS, getScenarioById, getJumps } from "./game.js";
 
 const boardEl = document.getElementById("board");
 const diceButtonEl = document.getElementById("dice-button");
 const diceValueEl = document.getElementById("dice-value");
 const statusEl = document.getElementById("status");
 const restartButtonEl = document.getElementById("restart-button");
+const scenarioSelectorEl = document.getElementById("scenario-selector");
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const VIEWBOX_SIZE = 1000;
@@ -142,10 +143,51 @@ function createBoardSvg() {
 }
 
 /**
- * Renders the 10x10 board with zigzag numbering.
- * Called ONCE from init().
+ * Renders the scenario selector (3 buttons).
+ * @param {Object[]} scenarios - Array of { id, name }
+ * @param {string} selectedId - Currently selected scenario id
+ * @param {Function} onSelect - Callback(selectedId)
+ * @returns {HTMLElement} Container element
  */
-export function renderBoard() {
+export function renderScenarioSelector(scenarios, selectedId, onSelect) {
+  scenarioSelectorEl.innerHTML = "";
+
+  const label = document.createElement("p");
+  label.className = "scenario-selector__label";
+  label.textContent = "Elige escenario:";
+  scenarioSelectorEl.appendChild(label);
+
+  const btnGroup = document.createElement("div");
+  btnGroup.className = "scenario-selector__group";
+  btnGroup.setAttribute("role", "radiogroup");
+  btnGroup.setAttribute("aria-label", "Selección de escenario");
+
+  scenarios.forEach((scenario) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = `scenario-btn-${scenario.id}`;
+    btn.className = `scenario-selector__btn${scenario.id === selectedId ? " scenario-selector__btn--active" : ""}`;
+    btn.dataset.scenarioId = scenario.id;
+    btn.setAttribute("role", "radio");
+    btn.setAttribute("aria-checked", scenario.id === selectedId);
+    btn.textContent = scenario.name;
+    btn.addEventListener("click", () => onSelect(scenario.id));
+    btnGroup.appendChild(btn);
+  });
+
+  scenarioSelectorEl.appendChild(btnGroup);
+  return scenarioSelectorEl;
+}
+
+/**
+ * Renders the 10x10 board with zigzag numbering for a scenario.
+ * Replaces existing board content.
+ * @param {Object} scenario - Scenario object { id, name, snakes, ladders }
+ */
+export function renderBoard(scenario) {
+  boardEl.innerHTML = "";
+
+  const jumps = getJumps(scenario);
   const fragments = [];
 
   for (let square = 1; square <= BOARD_LAST_SQUARE; square++) {
@@ -168,17 +210,17 @@ export function renderBoard() {
     numberSpan.textContent = square;
     cell.appendChild(numberSpan);
 
-    if (SNAKES[square]) {
+    if (scenario.snakes[square]) {
       cell.classList.add("board__cell--snake");
       const srLabel = document.createElement("span");
       srLabel.className = "visually-hidden";
-      srLabel.textContent = `Serpiente: baja a casilla ${SNAKES[square]}`;
+      srLabel.textContent = `Serpiente: baja a casilla ${scenario.snakes[square]}`;
       cell.appendChild(srLabel);
-    } else if (LADDERS[square]) {
+    } else if (scenario.ladders[square]) {
       cell.classList.add("board__cell--ladder");
       const srLabel = document.createElement("span");
       srLabel.className = "visually-hidden";
-      srLabel.textContent = `Escalera: sube a casilla ${LADDERS[square]}`;
+      srLabel.textContent = `Escalera: sube a casilla ${scenario.ladders[square]}`;
       cell.appendChild(srLabel);
     }
 
@@ -189,11 +231,11 @@ export function renderBoard() {
 
   const svg = createBoardSvg();
 
-  for (const [fromSquare, toSquare] of Object.entries(SNAKES)) {
+  for (const [fromSquare, toSquare] of Object.entries(scenario.snakes)) {
     drawSnake(svg, Number(fromSquare), toSquare);
   }
 
-  for (const [fromSquare, toSquare] of Object.entries(LADDERS)) {
+  for (const [fromSquare, toSquare] of Object.entries(scenario.ladders)) {
     drawLadder(svg, Number(fromSquare), toSquare);
   }
 
@@ -203,14 +245,14 @@ export function renderBoard() {
 /**
  * Renders player tokens on their squares.
  * @param {GameState} state
+ * @param {Object} scenario - Scenario object (for jumps lookup if needed)
  */
-export function renderTokens(state) {
+export function renderTokens(state, scenario) {
   boardEl.querySelectorAll(".token").forEach((el) => el.remove());
 
   state.positions.forEach((pos, playerIndex) => {
     if (pos === START_SQUARE) return;
 
-    const { row, col } = getSquareCoordinates(pos);
     const cell = boardEl.querySelector(`.board__cell[data-square="${pos}"]`);
     if (!cell) return;
 
@@ -245,7 +287,7 @@ export function renderStatus(state) {
 /**
  * Shows dice value (no animation).
  * @param {number|null} roll
- * @param {number} [currentPlayer=0] - Current player index (0 or 1)
+ * @param {number} [currentPlayer=0]
  */
 export function renderDice(roll, currentPlayer = 0) {
   if (roll === null) {
@@ -268,9 +310,10 @@ export function setDiceButtonEnabled(enabled) {
 /**
  * Renders the complete game state to DOM (except board).
  * @param {GameState} state
+ * @param {Object} scenario
  */
-export function renderGame(state) {
-  renderTokens(state);
+export function renderGame(state, scenario) {
+  renderTokens(state, scenario);
   renderStatus(state);
   renderDice(state.lastRoll, state.currentPlayer);
   setDiceButtonEnabled(state.winner === null);

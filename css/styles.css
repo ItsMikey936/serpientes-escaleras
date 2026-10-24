@@ -335,6 +335,60 @@ body {
 }
 
 /* ==========================================================================
+   Scenario Selector
+   ========================================================================== */
+.scenario-selector {
+  padding: var(--space-md);
+  background: var(--color-board-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.scenario-selector__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-sm);
+  text-align: center;
+}
+
+.scenario-selector__group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  justify-content: center;
+}
+
+.scenario-selector__btn {
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--color-cell-light);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  min-width: 80px;
+}
+
+.scenario-selector__btn:hover:not(.scenario-selector__btn--active) {
+  background: var(--color-cell-dark);
+  border-color: var(--color-text-muted);
+}
+
+.scenario-selector__btn:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.scenario-selector__btn--active {
+  background: var(--color-button);
+  color: #fff;
+  border-color: var(--color-button);
+}
+
+/* ==========================================================================
    Restart Button
    ========================================================================== */
 .game__restart-button {
