@@ -28,13 +28,25 @@ export function renderBoard() {
       cell.classList.add("board__cell--dark");
     }
 
+    const numberSpan = document.createElement("span");
+    numberSpan.className = "board__cell-number";
+    numberSpan.textContent = square;
+    cell.appendChild(numberSpan);
+
     if (SNAKES[square]) {
       cell.classList.add("board__cell--snake");
+      const label = document.createElement("span");
+      label.className = "board__cell-label";
+      label.textContent = `S→${SNAKES[square]}`;
+      cell.appendChild(label);
     } else if (LADDERS[square]) {
       cell.classList.add("board__cell--ladder");
+      const label = document.createElement("span");
+      label.className = "board__cell-label";
+      label.textContent = `E→${LADDERS[square]}`;
+      cell.appendChild(label);
     }
 
-    cell.textContent = square;
     fragments.push(cell);
   }
 
