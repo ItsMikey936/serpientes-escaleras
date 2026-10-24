@@ -184,6 +184,7 @@ body {
    Board
    ========================================================================== */
 .board {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(10, 1fr);
   grid-template-rows: repeat(10, 1fr);
@@ -248,6 +249,56 @@ body {
 
 .board__cell-number {
   z-index: 1;
+}
+
+/* ==========================================================================
+   SVG Overlay (snakes & ladders)
+   ========================================================================== */
+.board__svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.board__svg-path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.board__svg-path--snake {
+  stroke: var(--color-snake);
+  stroke-width: 3;
+}
+
+.board__svg-path--ladder {
+  stroke: var(--color-ladder);
+  stroke-width: 2;
+}
+
+.board__svg-rung {
+  stroke: var(--color-ladder);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* ==========================================================================
+   Accessibility: Visually hidden
+   ========================================================================== */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ==========================================================================

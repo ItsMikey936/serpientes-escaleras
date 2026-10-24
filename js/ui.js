@@ -6,6 +6,141 @@ const diceValueEl = document.getElementById("dice-value");
 const statusEl = document.getElementById("status");
 const restartButtonEl = document.getElementById("restart-button");
 
+const SVG_NS = "http://www.w3.org/2000/svg";
+const VIEWBOX_SIZE = 1000;
+const CELL_SIZE = VIEWBOX_SIZE / BOARD_SIZE;
+
+/**
+ * Returns the center coordinates of a square in viewBox space (0-1000).
+ * @param {number} square - Square number (1-100)
+ * @returns {{x: number, y: number}}
+ */
+function getSquareCenter(square) {
+  const { row, col } = getSquareCoordinates(square);
+  return {
+    x: col * CELL_SIZE + CELL_SIZE / 2,
+    y: row * CELL_SIZE + CELL_SIZE / 2
+  };
+}
+
+/**
+ * Draws a wavy snake path from source to destination.
+ * @param {SVGSVGElement} svg - SVG element to append to
+ * @param {number} fromSquare - Source square
+ * @param {number} toSquare - Destination square
+ */
+function drawSnake(svg, fromSquare, toSquare) {
+  const start = getSquareCenter(fromSquare);
+  const end = getSquareCenter(toSquare);
+
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const dist = Math.hypot(dx, dy);
+
+  const perpX = -dy / dist;
+  const perpY = dx / dist;
+
+  const waveAmplitude = Math.min(dist * 0.15, 60);
+  const waves = 3;
+
+  const path = document.createElementNS(SVG_NS, "path");
+  path.className.baseVal = "board__svg-path board__svg-path--snake";
+
+  let d = `M ${start.x} ${start.y} `;
+
+  for (let i = 1; i <= waves; i++) {
+    const t = i / (waves + 1);
+    const ctrlX = start.x + dx * t + perpX * waveAmplitude * Math.sin(t * Math.PI * 2);
+    const ctrlY = start.y + dy * t + perpY * waveAmplitude * Math.sin(t * Math.PI * 2);
+    const nextT = (i + 1) / (waves + 1);
+    const nextX = start.x + dx * nextT;
+    const nextY = start.y + dy * nextT;
+    d += `Q ${ctrlX} ${ctrlY} ${nextX} ${nextY} `;
+  }
+
+  d += `Q ${start.x + dx * 0.875 + perpX * waveAmplitude * 0.5} ${start.y + dy * 0.875 + perpY * waveAmplitude * 0.5} ${end.x} ${end.y}`;
+
+  path.setAttribute("d", d);
+  svg.appendChild(path);
+}
+
+/**
+ * Draws a ladder (two rails with rungs) from source to destination.
+ * @param {SVGSVGElement} svg - SVG element to append to
+ * @param {number} fromSquare - Source square
+ * @param {number} toSquare - Destination square
+ */
+function drawLadder(svg, fromSquare, toSquare) {
+  const start = getSquareCenter(fromSquare);
+  const end = getSquareCenter(toSquare);
+
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const dist = Math.hypot(dx, dy);
+
+  const perpX = -dy / dist;
+  const perpY = dx / dist;
+
+  const railOffset = 12;
+
+  const rail1StartX = start.x + perpX * railOffset;
+  const rail1StartY = start.y + perpY * railOffset;
+  const rail1EndX = end.x + perpX * railOffset;
+  const rail1EndY = end.y + perpY * railOffset;
+
+  const rail2StartX = start.x - perpX * railOffset;
+  const rail2StartY = start.y - perpY * railOffset;
+  const rail2EndX = end.x - perpX * railOffset;
+  const rail2EndY = end.y - perpY * railOffset;
+
+  const rail1 = document.createElementNS(SVG_NS, "line");
+  rail1.className.baseVal = "board__svg-path board__svg-path--ladder";
+  rail1.setAttribute("x1", rail1StartX);
+  rail1.setAttribute("y1", rail1StartY);
+  rail1.setAttribute("x2", rail1EndX);
+  rail1.setAttribute("y2", rail1EndY);
+  svg.appendChild(rail1);
+
+  const rail2 = document.createElementNS(SVG_NS, "line");
+  rail2.className.baseVal = "board__svg-path board__svg-path--ladder";
+  rail2.setAttribute("x1", rail2StartX);
+  rail2.setAttribute("y1", rail2StartY);
+  rail2.setAttribute("x2", rail2EndX);
+  rail2.setAttribute("y2", rail2EndY);
+  svg.appendChild(rail2);
+
+  const rungCount = Math.max(3, Math.floor(dist / 60));
+  for (let i = 1; i <= rungCount; i++) {
+    const t = i / (rungCount + 1);
+    const rungStartX = start.x + dx * t - perpX * railOffset;
+    const rungStartY = start.y + dy * t - perpY * railOffset;
+    const rungEndX = start.x + dx * t + perpX * railOffset;
+    const rungEndY = start.y + dy * t + perpY * railOffset;
+
+    const rung = document.createElementNS(SVG_NS, "line");
+    rung.className.baseVal = "board__svg-rung";
+    rung.setAttribute("x1", rungStartX);
+    rung.setAttribute("y1", rungStartY);
+    rung.setAttribute("x2", rungEndX);
+    rung.setAttribute("y2", rungEndY);
+    svg.appendChild(rung);
+  }
+}
+
+/**
+ * Creates the SVG overlay for snakes and ladders.
+ * @returns {SVGSVGElement}
+ */
+function createBoardSvg() {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.className.baseVal = "board__svg";
+  svg.setAttribute("viewBox", `0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`);
+  svg.setAttribute("width", "100%");
+  svg.setAttribute("height", "100%");
+  svg.setAttribute("pointer-events", "none");
+  return svg;
+}
+
 /**
  * Renders the 10x10 board with zigzag numbering.
  * Called ONCE from init().
@@ -35,22 +170,34 @@ export function renderBoard() {
 
     if (SNAKES[square]) {
       cell.classList.add("board__cell--snake");
-      const label = document.createElement("span");
-      label.className = "board__cell-label";
-      label.textContent = `S→${SNAKES[square]}`;
-      cell.appendChild(label);
+      const srLabel = document.createElement("span");
+      srLabel.className = "visually-hidden";
+      srLabel.textContent = `Serpiente: baja a casilla ${SNAKES[square]}`;
+      cell.appendChild(srLabel);
     } else if (LADDERS[square]) {
       cell.classList.add("board__cell--ladder");
-      const label = document.createElement("span");
-      label.className = "board__cell-label";
-      label.textContent = `E→${LADDERS[square]}`;
-      cell.appendChild(label);
+      const srLabel = document.createElement("span");
+      srLabel.className = "visually-hidden";
+      srLabel.textContent = `Escalera: sube a casilla ${LADDERS[square]}`;
+      cell.appendChild(srLabel);
     }
 
     fragments.push(cell);
   }
 
   boardEl.append(...fragments);
+
+  const svg = createBoardSvg();
+
+  for (const [fromSquare, toSquare] of Object.entries(SNAKES)) {
+    drawSnake(svg, Number(fromSquare), toSquare);
+  }
+
+  for (const [fromSquare, toSquare] of Object.entries(LADDERS)) {
+    drawLadder(svg, Number(fromSquare), toSquare);
+  }
+
+  boardEl.appendChild(svg);
 }
 
 /**
